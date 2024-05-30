@@ -16,11 +16,11 @@ const (
 
 var driverList = map[string][]string{
 	"minimal": {
-		"github.com/go-sql-driver/mysql",
-		"github.com/lib/pq",
 		"github.com/microsoft/go-mssqldb/azuread",
 	},
 	"extra": {
+		"github.com/go-sql-driver/mysql",
+		"github.com/lib/pq",
 		"github.com/ClickHouse/clickhouse-go/v2",
 		"github.com/jackc/pgx/v5/stdlib",
 		"github.com/snowflakedb/gosnowflake",
