@@ -9,7 +9,9 @@ global:
 # The target to monitor and the collectors to execute on it.
 target:
   name: mssql_database
-  data_source_name: 'sqlserver://sa:Pa55w0rd!@ms-std-mon-0.ms-std-mon-pods.demo.svc.cluster.local:1433/master'
+  data_source_name: 'sqlserver://prom_user:prom_password@dbserver.example.com:1433/master'
+# Example for KubeDB
+#  data_source_name: 'sqlserver://username:password@<pod_name>.<gov_svc_name>.<namespace>.svc.cluster.local:1433/master'
   collectors: [mssql_*]
   enable_ping: true
 
