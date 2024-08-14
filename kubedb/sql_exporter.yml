@@ -1,0 +1,46 @@
+# Global settings and defaults.
+global:
+  scrape_timeout: 10s
+  scrape_timeout_offset: 500ms
+  min_interval: 0s
+  max_connections: 3
+  max_idle_connections: 3
+
+# The target to monitor and the collectors to execute on it.
+target:
+  name: mssql_database
+  data_source_name: 'sqlserver://prom_user:prom_password@dbserver.example.com:1433/master'
+# Example for KubeDB
+#  data_source_name: 'sqlserver://username:password@<pod_name>.<gov_svc_name>.<namespace>.svc.cluster.local:1433/master'
+  collectors: [mssql_*]
+  enable_ping: true
+
+# Collectors and metrics definitions
+collectors:
+  - collector_name: mssql_sample
+    metrics:
+      - metric_name: mssql_log_growths
+        type: counter
+        help: 'Total number of times the transaction log has been expanded since last restart, per database.'
+        key_labels:
+          - db
+        static_labels:
+          env: dev
+          region: europe
+        values: [counter]
+        query: |
+          SELECT rtrim(instance_name) AS db, cntr_value AS counter
+          FROM sys.dm_os_performance_counters
+          WHERE counter_name = 'Log Growths' AND instance_name <> '_Total'
+
+      - metric_name: mssql_hostname
+        type: gauge
+        help: 'Database server hostname'
+        key_labels:
+          - hostname
+        static_value: 1
+        query: |
+          SELECT @@SERVERNAME AS hostname
+
+collector_files:
+  - "*.collector.yml"
