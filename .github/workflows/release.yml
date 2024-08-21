@@ -1,94 +1,41 @@
-name: Build and Publish artifacts
+name: Release
 
 on:
   workflow_dispatch:
   push:
     tags:
-    - '*.*.*'
+      - "*.*"
+      - "*.*.*"
 
 jobs:
   build:
-    name: Build and upload artifacts
+    name: Build
     runs-on: ubuntu-latest
-    env:
-      VERSION: ${{ github.ref_name }}
     steps:
-    - name: Set up Go 1.x
-      uses: actions/setup-go@v5
-      with:
-        go-version: ^1.20
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v1
 
-    - name: Promu - Crossbuild
-      run: make crossbuild
-
-    - name: Promu - Prepare packages
-      run: make crossbuild-tarballs
-
-    - name: Create deb package
-      uses: burningalchemist/action-gh-nfpm@v1
-      with:
-        packager: deb
-        config: packaging/conf/nfpm.yaml
-        target: .tarballs/
-    - name: Create rpm package
-      uses: burningalchemist/action-gh-nfpm@v1
-      with:
-        packager: rpm
-        config: packaging/conf/nfpm.yaml
-        target: .tarballs/
-
-    - name: Calculate checksums
-      run: make crossbuild-checksum
-
-    - name: Upload artifacts
-      uses: softprops/action-gh-release@v2
-      with:
-        files: |
-          .tarballs/*
-  docker:
-    name: Push Docker image to Docker Hub
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v4
-
-      - name: Get Go version from the '.promu.yml' config
-        id: promu-go-version
-        run: printf "version=%s" "$(yq '.go.version' .promu.yml)" >> $GITHUB_OUTPUT
+      - name: Print version info
+        id: semver
+        run: |
+          make version
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        id: qemu
+        uses: docker/setup-qemu-action@v1
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v1
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
+      - name: Available platforms
+        run: echo ${{ steps.buildx.outputs.platforms }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
+      - name: Log in to the GitHub Container registry
+        uses: docker/login-action@v2
         with:
-          images: burningalchemist/sql_exporter
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.multi-arch
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
-          provenance: false
-          build-args: |
-            GOVERSION=${{ steps.promu-go-version.outputs.version }}
+      - name: Build mssql-exporter
+        run: |
+          make release
