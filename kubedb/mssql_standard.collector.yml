@@ -180,6 +180,47 @@ metrics:
         available_page_file_kb * 1024 AS available
       FROM sys.dm_os_sys_memory
 
+  - metric_name: mssql_pod_role
+    type: gauge
+    help: 'The role of the pod in the availability group.'
+    key_labels:
+      - role
+    static_value: 1
+    query: |
+      SELECT role_desc AS role
+      FROM sys.dm_hadr_availability_replica_states
+      WHERE replica_id = (
+          SELECT replica_id
+          FROM sys.availability_replicas
+          WHERE replica_server_name = @@SERVERNAME
+      )
+
+  - metric_name: mssql_uptime_seconds
+    type: gauge
+    help: 'SQL Server uptime in seconds.'
+    values: [uptime_seconds]
+    query: |
+      SELECT DATEDIFF(second, sqlserver_start_time, GETUTCDATE()) AS uptime_seconds
+      FROM sys.dm_os_sys_info
+
+  - metric_name: sqlserver_ag_cluster_size
+    type: gauge
+    help: 'Number of active replicas in the SQL Server Availability Group.'
+    values: [active_replicas]
+    query: |
+      SELECT COUNT(*) AS active_replicas
+      FROM sys.dm_hadr_availability_replica_states
+      WHERE role_desc <> 'RESOLVING';
+
+  - metric_name: sqlserver_compilations_per_sec
+    type: gauge
+    help: 'Number of SQL compilations per second in SQL Server.'
+    values: [sql_compilations_per_sec]
+    query: |
+      SELECT cntr_value AS sql_compilations_per_sec
+      FROM sys.dm_os_performance_counters
+      WHERE counter_name = 'SQL Compilations/sec';
+
 queries:
   # Populates `mssql_io_stall` and `mssql_io_stall_total`
   - query_name: mssql_io_stall
