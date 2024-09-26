@@ -27,19 +27,23 @@ pkgs    = $(shell $(GO) list ./... | grep -v /vendor/)
 
 PREFIX              ?= $(shell pwd)
 BIN_DIR             ?= $(shell pwd)
-DOCKER_IMAGE_NAME   ?= sql-exporter
+REGISTRY  		    ?= ghcr.io/kubedb
+BIN      		    ?= mssql-exporter
+IMAGE    	      	:= $(REGISTRY)/$(BIN)
+TAG                 ?= $(shell git describe --exact-match --abbrev=0 2>/dev/null || echo "")
+DOCKER_PLATFORMS    := linux/amd64 linux/arm64
+PLATFORM         ?= $(firstword $(DOCKER_PLATFORMS))
+VERSION          = $(TAG)_$(subst /,_,$(PLATFORM))
+
+DOCKER_IMAGE_NAME   ?= mssql-exporter
 DOCKER_IMAGE_TAG    ?= $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))
 
 
-all: format build test
+all: format build
 
 style:
 	@echo ">> checking code style"
 	@! gofmt -d $(shell find . -path ./vendor -prune -o -name '*.go' -print) | grep '^'
-
-test:
-	@echo ">> running tests"
-	@$(GO) test -short $(pkgs)
 
 format:
 	@echo ">> formatting code"
@@ -95,4 +99,35 @@ promu:
 		$(GO) install github.com/prometheus/promu@$(PROMU_VERSION)
 endif
 
-.PHONY: all style format build test vet tarball docker promu
+.PHONY: container
+container: $(BUILD_DIRS)
+	@echo "container: $(IMAGE):$(VERSION)"
+	tar -czh . | docker buildx build --platform $(PLATFORM) --load --pull -t $(IMAGE):$(VERSION) -f Dockerfile -
+	@echo
+
+push: container
+	@docker push $(IMAGE):$(VERSION)
+	@echo "pushed: $(IMAGE):$(VERSION)"
+	@echo
+
+push-%:
+	@$(MAKE) push \
+	    --no-print-directory \
+	    PLATFORM=$(subst _,/,$*)
+
+.PHONY: docker-manifest
+docker-manifest:
+	docker manifest create -a $(IMAGE):$(TAG) $(foreach PLATFORM,$(DOCKER_PLATFORMS),$(IMAGE):$(TAG)_$(subst /,_,$(PLATFORM)))
+	docker manifest push $(IMAGE):$(TAG)
+
+all-push: $(addprefix push-, $(subst /,_,$(DOCKER_PLATFORMS)))
+
+.PHONY: version
+version:
+	@echo ::set-output name=version::$(TAG)
+
+.PHONY: release
+release:
+	@$(MAKE) all-push docker-manifest --no-print-directory
+
+.PHONY: all style format build vet tarball promu
