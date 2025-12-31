@@ -18,5 +18,5 @@ COPY        --from=builder /go/src/github.com/kubedb/mssqlserver_exporter/sql_ex
 ADD kubedb /etc/sql-exporter/
 
 EXPOSE      9399
-USER        nobody
+USER        65534
 ENTRYPOINT  [ "/bin/sql_exporter" ]
