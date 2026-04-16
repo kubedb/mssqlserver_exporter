@@ -1,6 +1,6 @@
 module github.com/burningalchemist/sql_exporter
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.43.0
@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.7
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.41.1
 	github.com/go-sql-driver/mysql v1.9.3
-	github.com/jackc/pgx/v5 v5.8.0
+	github.com/jackc/pgx/v5 v5.9.0
 	github.com/kardianos/minwinsvc v1.0.2
 	github.com/lib/pq v1.11.2
 	github.com/microsoft/go-mssqldb v1.9.6
